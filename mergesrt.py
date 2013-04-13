@@ -41,7 +41,7 @@ B_SUBTITLE
 A_END is assumed to be smaller than B_START (or equal?)
 So if A_END >= B_START, B_START will be overwritten to A_END + 1
 
-On the other hand, players like mplayer has bugs to trigger the close of
+On the other hand, players like mplayer have bugs to trigger the closure of
 a subtitle.
 for example: the format means ms->ms sb1/ms->ms sb2: the sb showed.
 
@@ -52,8 +52,8 @@ for example: the format means ms->ms sb1/ms->ms sb2: the sb showed.
 1->10 A  / 2->11 B: B             # A meets 10ms and B is changed to [10:11], so it last for 3 sec
 2->10 A  / 3->11 B: B
 2->11 A  / 3->12 B: B
-1->2  A  / 2->3  B: A B           # same ase 1->9 / 2->9
-1->2  A  / 2->3  B / 12-23 C : A  # Interesting, B is killed by C, and C suicide
+1->2  A  / 2->3  B: A B           # same as 1->9 / 2->9
+1->2  A  / 2->3  B / 12-23 C : A  # Interesting, B is killed by C, and C suicided
 """
 
 u"""
@@ -286,7 +286,7 @@ class SRT:
 
         line = self.readline()
         if line is None:
-            raise Exception("The number is expected but the timestamps fails before EOF")
+            raise Exception("The number is expected but the timestamps fail before EOF")
         line = line.strip()
         regexp = re.compile(ur"^(?P<start>%s) --> (?P<end>%s)$" % (Timestamp.regexp, Timestamp.regexp))
         matcher = regexp.match(line)
@@ -373,7 +373,7 @@ def usage():
     -M: do not merge lines and do not prepend/append empty lines
     -e ENCODING: basically we can automatically detect encodings, but you can force encoding if we are wrong.
     -E ENCODING: output encoding (by default your locale)
-    -s 'EMPTY_LINE': the charectors you want to use as empty line by default u"\\u3000" a CJK space
+    -s 'EMPTY_LINE': the characters you want to use as empty line by default u"\\u3000" a CJK space
     -O OUTPUT_FILE: output_filename
     """
 
