@@ -74,7 +74,10 @@ def codecs_open(filename, force_encoding=None):
             f.close()
             return codecs.open(filename, encoding=encoding)
         except UnicodeDecodeError,e:
+            # print >> sys.stderr, "Cannot decode with %s, trying next encoding" % (repr(e.encoding))
             pass
+        except LookupError,e:
+            print >> sys.stderr, "Python complains (%s), trying next encoding" % (e.message)
     raise Exception("No encodings found, cannot decode %s" % filename)
 
 
@@ -422,7 +425,18 @@ def do_main():
             sys.stdout = codecs.getwriter(output_encoding)(sys.stdout)
         else:
             sys.stdout = codecs.open(output_filename, mode="w", encoding=output_encoding)
-    do_merge(eargs, args)
+    try:
+        do_merge(eargs, args)
+    except LookupError, e:
+        if output_encoding != "utf-8":
+            raise Exception("Python complains (%s), try -E utf-8" % (e.message)) 
+        else:
+            raise Exception("Python complains (%s) (Please report bug.)" % (e.message)) 
+    except UnicodeEncodeError, e:
+        if output_encoding != "utf-8":
+            raise Exception("Cannot encode to %s (You will want to try -E utf-8)" % (repr(e.encoding)))
+        else:
+            raise Exception("Cannot encode to utf-8 (Please report bug.)")
     return 0
 
 if __name__ == "__main__":
