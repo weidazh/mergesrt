@@ -361,23 +361,30 @@ def do_merge(eargs, args):
 
 def usage():
     print """Usage:
-    mergesrt.py [-L LINES_PER_SUB] [-O OUTPUT_FILE] [[-e ENCODING],FILE] [[-e ENCODING],FILE] [FILE] ...
-        FILES can be:
-            -e encoding,FILE
+    mergesrt.py [OPTIONS] [FILES]
+
+FILES:
+    FILES can be multiple items of the following format:
+            -e INPUT_ENCODING,FILE
+    or:
             FILE
-        But -e encoding,FILE items must be before FILE items
+    But -e encoding,FILE items must be before FILE items
+    Try without -e first to detect the encodings automatically.
+
     See the examples below:
         mergesrt.py abc.chs.srt abc.cht.srt abc.eng.srt
         mergesrt.py -e gbk,abc.chs.srt -e big5,abc.cht.srt abc.eng.srt
     The following is NOT permitted:
         mergesrt.py abc.eng.srt -e gbk,abc.chs.srt -e big5,abc.cht.srt
 
-    -l LINES_PER_SUB: LINES_PER_SUB is how many lines for each language in each subtitle
-    -M: do not merge lines and do not prepend/append empty lines
-    -e ENCODING: basically we can automatically detect encodings, but you can force encoding if we are wrong.
-    -E ENCODING: output encoding (by default your locale)
-    -s 'EMPTY_LINE': the characters you want to use as empty line by default u"\\u3000" a CJK space
-    -O OUTPUT_FILE: output_filename
+OPTIONS:
+    -e INPUT_ENCODING,FILE: most of the time encodings are automatically detected, but you can force encoding it gets wrong;
+    -E OUTPUT_ENCODING: output encoding (by default your system's locale setting, refer to your `locale` or `chcp`);
+    -l LINES_PER_SUB: indicates how many lines for each language in each subtitle;
+    -M: do not merge lines and do not prepend/append empty lines;
+    -O OUTPUT_FILE: output_filename;
+    -s 'EMPTY_LINE': the characters you want to use as empty line by default u"\\u3000"(a CJK space).
+
     """
 
 def do_main():
@@ -429,12 +436,12 @@ def do_main():
         do_merge(eargs, args)
     except LookupError, e:
         if output_encoding != "utf-8":
-            raise Exception("Python complains (%s), try -E utf-8" % (e.message)) 
+            raise Exception("Python complains (%s). Please try to force output encoding by e.g. -E utf-8" % (e.message)) 
         else:
             raise Exception("Python complains (%s) (Please report bug.)" % (e.message)) 
     except UnicodeEncodeError, e:
         if output_encoding != "utf-8":
-            raise Exception("Cannot encode to %s (You will want to try -E utf-8)" % (repr(e.encoding)))
+            raise Exception("Cannot encode to %s (You will want to try to force output encoding by e.g. -E utf-8)" % (repr(e.encoding)))
         else:
             raise Exception("Cannot encode to utf-8 (Please report bug.)")
     return 0
