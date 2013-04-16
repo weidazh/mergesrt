@@ -23,6 +23,8 @@ import codecs
 import sys
 
 USER_ENCODINGS = ["us-ascii", "gbk", "big5", "utf-8", "utf-16"]
+# u"." is ugly but it is safe even only ascii is supported.
+EMPTY_LINES = [u"\u3000", u"."]
 EMPTY_LINE = u"\u3000" # you need the CJK
 LINES_PER_SUB = 2
 MERGE_EXPAND_LINES = True
@@ -390,7 +392,7 @@ OPTIONS:
 def do_main():
     import locale
     import getopt
-    global MERGE_EXPAND_LINES
+    global MERGE_EXPAND_LINES, EMPTY_LINE, EMPTY_LINES, LINES_PER_SUB
 
     output_filename = "-"
     if sys.stdout.isatty():
@@ -417,7 +419,7 @@ def do_main():
         elif o == "-E":
             output_encoding = a
         elif o == "-s":
-            EMPTY_LINE = unicode(a, locale.getdefaultlocale()[1])
+            EMPTY_LINES = [unicode(a, locale.getdefaultlocale()[1])]
         elif o == "-O":
             output_filename = a
         else:
@@ -433,6 +435,12 @@ def do_main():
         else:
             sys.stdout = codecs.open(output_filename, mode="w", encoding=output_encoding)
     try:
+        for EMPTY_LINE in EMPTY_LINES:
+            try:
+                EMPTY_LINE.encode(output_encoding)
+                break
+            except (LookupError, UnicodeEncodeError):
+                pass
         do_merge(eargs, args)
     except LookupError, e:
         if output_encoding != "utf-8":
@@ -441,9 +449,9 @@ def do_main():
             raise Exception("Python complains (%s) (Please report bug.)" % (e.message)) 
     except UnicodeEncodeError, e:
         if output_encoding != "utf-8":
-            raise Exception("Cannot encode to %s (You will want to try to force output encoding by e.g. -E utf-8)" % (repr(e.encoding)))
+            raise Exception("Cannot encode %s to %s (You will want to try to force output encoding by e.g. -E utf-8)" % (repr(e.object), repr(e.encoding)))
         else:
-            raise Exception("Cannot encode to utf-8 (Please report bug.)")
+            raise Exception("Cannot encode %s to utf-8 (Please report bug.)" % (repr(e.object)))
     return 0
 
 if __name__ == "__main__":
