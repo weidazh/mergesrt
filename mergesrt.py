@@ -410,8 +410,6 @@ def do_main():
         elif o == "-M":
             MERGE_EXPAND_LINES = False
         elif o == "-e":
-            if len(args) != 0:
-                raise Exception("You must use -e for all if you use -e, or I cannot determine the ordering")
             idx = a.index(",")
             if idx < 0:
                 raise Exception("Cannot find \",\", in option -e %s" % a)
