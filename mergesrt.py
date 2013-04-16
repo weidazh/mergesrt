@@ -23,6 +23,8 @@ import codecs
 import sys
 
 USER_ENCODINGS = ["us-ascii", "gbk", "big5", "utf-8", "utf-16"]
+# u"." is ugly but it is safe even only ascii is supported.
+EMPTY_LINES = [u"\u3000", u"."]
 EMPTY_LINE = u"\u3000" # you need the CJK
 LINES_PER_SUB = 2
 MERGE_EXPAND_LINES = True
@@ -74,7 +76,10 @@ def codecs_open(filename, force_encoding=None):
             f.close()
             return codecs.open(filename, encoding=encoding)
         except UnicodeDecodeError,e:
+            # print >> sys.stderr, "Cannot decode with %s, trying next encoding" % (repr(e.encoding))
             pass
+        except LookupError,e:
+            print >> sys.stderr, "Python complains (%s), trying next encoding" % (e.message)
     raise Exception("No encodings found, cannot decode %s" % filename)
 
 
@@ -358,29 +363,36 @@ def do_merge(eargs, args):
 
 def usage():
     print """Usage:
-    mergesrt.py [-L LINES_PER_SUB] [-O OUTPUT_FILE] [[-e ENCODING],FILE] [[-e ENCODING],FILE] [FILE] ...
-        FILES can be:
-            -e encoding,FILE
+    mergesrt.py [OPTIONS] [FILES]
+
+FILES:
+    FILES can be multiple items of the following format:
+            -e INPUT_ENCODING,FILE
+    or:
             FILE
-        But -e encoding,FILE items must be before FILE items
+    But -e encoding,FILE items must be before FILE items
+    Try without -e first to detect the encodings automatically.
+
     See the examples below:
         mergesrt.py abc.chs.srt abc.cht.srt abc.eng.srt
         mergesrt.py -e gbk,abc.chs.srt -e big5,abc.cht.srt abc.eng.srt
     The following is NOT permitted:
         mergesrt.py abc.eng.srt -e gbk,abc.chs.srt -e big5,abc.cht.srt
 
-    -l LINES_PER_SUB: LINES_PER_SUB is how many lines for each language in each subtitle
-    -M: do not merge lines and do not prepend/append empty lines
-    -e ENCODING: basically we can automatically detect encodings, but you can force encoding if we are wrong.
-    -E ENCODING: output encoding (by default your locale)
-    -s 'EMPTY_LINE': the characters you want to use as empty line by default u"\\u3000" a CJK space
-    -O OUTPUT_FILE: output_filename
+OPTIONS:
+    -e INPUT_ENCODING,FILE: most of the time encodings are automatically detected, but you can force encoding it gets wrong;
+    -E OUTPUT_ENCODING: output encoding (by default your system's locale setting, refer to your `locale` or `chcp`);
+    -l LINES_PER_SUB: indicates how many lines for each language in each subtitle;
+    -M: do not merge lines and do not prepend/append empty lines;
+    -O OUTPUT_FILE: output_filename;
+    -s 'EMPTY_LINE': the characters you want to use as empty line by default u"\\u3000"(a CJK space).
+
     """
 
 def do_main():
     import locale
     import getopt
-    global MERGE_EXPAND_LINES
+    global MERGE_EXPAND_LINES, EMPTY_LINE, EMPTY_LINES, LINES_PER_SUB
 
     output_filename = "-"
     if sys.stdout.isatty():
@@ -398,8 +410,6 @@ def do_main():
         elif o == "-M":
             MERGE_EXPAND_LINES = False
         elif o == "-e":
-            if len(args) != 0:
-                raise Exception("You must use -e for all if you use -e, or I cannot determine the ordering")
             idx = a.index(",")
             if idx < 0:
                 raise Exception("Cannot find \",\", in option -e %s" % a)
@@ -407,7 +417,7 @@ def do_main():
         elif o == "-E":
             output_encoding = a
         elif o == "-s":
-            EMPTY_LINE = unicode(a, locale.getdefaultlocale()[1])
+            EMPTY_LINES = [unicode(a, locale.getdefaultlocale()[1])]
         elif o == "-O":
             output_filename = a
         else:
@@ -422,7 +432,24 @@ def do_main():
             sys.stdout = codecs.getwriter(output_encoding)(sys.stdout)
         else:
             sys.stdout = codecs.open(output_filename, mode="w", encoding=output_encoding)
-    do_merge(eargs, args)
+    try:
+        for EMPTY_LINE in EMPTY_LINES:
+            try:
+                EMPTY_LINE.encode(output_encoding)
+                break
+            except (LookupError, UnicodeEncodeError):
+                pass
+        do_merge(eargs, args)
+    except LookupError, e:
+        if output_encoding != "utf-8":
+            raise Exception("Python complains (%s). Please try to force output encoding by e.g. -E utf-8" % (e.message)) 
+        else:
+            raise Exception("Python complains (%s) (Please report bug.)" % (e.message)) 
+    except UnicodeEncodeError, e:
+        if output_encoding != "utf-8":
+            raise Exception("Cannot encode %s to %s (You will want to try to force output encoding by e.g. -E utf-8)" % (repr(e.object), repr(e.encoding)))
+        else:
+            raise Exception("Cannot encode %s to utf-8 (Please report bug.)" % (repr(e.object)))
     return 0
 
 if __name__ == "__main__":
