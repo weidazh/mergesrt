@@ -26,6 +26,7 @@ USER_ENCODINGS = ["us-ascii", "gbk", "big5", "utf-8", "utf-16"]
 # u"." is ugly but it is safe even only ascii is supported.
 EMPTY_LINES = [u"\u3000", u"."]
 EMPTY_LINE = u"\u3000" # you need the CJK
+LINE_MERGER = u" / " # merge two lines to A + LINE_MERGER + B
 LINES_PER_SUB = 2
 MERGE_EXPAND_LINES = True
 
@@ -159,7 +160,7 @@ class SRTLine:
                 if len(text[i]) + len(text[i + 1]) < minimum:
                     minimum = len(text[i]) + len(text[i + 1])
                     best_i = i
-            text = text[:i] + [text[i] + EMPTY_LINE + text[i + 1]] + text[i + 2:]
+            text = text[:i] + [text[i] + LINE_MERGER + text[i + 1]] + text[i + 2:]
         if DEBUG_MERGING:
             print >> sys.stderr, ">>>>"
             for line in text:
