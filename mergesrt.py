@@ -127,6 +127,9 @@ class Timestamp:
         else:
             return "%02d:%02d:%02d,%03d" % (self.hour, self.minute, self.sec, self.msec)
 
+    def __repr__(self):
+        return "Timestamp(%s)" % (str(self))
+
     def __cmp__(self, b):
         if b is None:
             raise Exception("comparing with None")
@@ -177,6 +180,12 @@ class SRTLine:
             if MERGE_EXPAND_LINES and len(text) > LINES_PER_SUB:
                 text = self.merge_text_lines(text)
             self.text = u"\n".join(text)
+
+    def __repr__(self):
+        return "SRTLINE(%s,%s,%s)" % (repr(self.start), repr(self.end), repr(self.text))
+
+    def __str__(self):
+        return "SRTLINE(%s,%s,%s)" % (str(self.start), str(self.end), self.text)
 
 class MPlayerFilter:
     def __init__(self):
@@ -242,8 +251,9 @@ class SRT:
         self.lineno = 0
         self.subno = 0
         self.current_time = Timestamp(0, 0)
+        self.current_state = 0
         self.align_bottom = align_bottom
-        self.next()
+        self.next(self.current_time)
 
     def readline(self):
         self.lineno += 1
@@ -280,7 +290,7 @@ class SRT:
         else:
             raise Exception("Expect number but I got %s %s:L%d" % (repr(line), self.filename, self.lineno))
 
-    def next(self):
+    def next(self, current_time):
         if self.subno is None:
             self.current = None
             return
@@ -298,9 +308,15 @@ class SRT:
         if not matcher:
             raise Exception("Expect start --> end, but I got %s %s:L%d" % (repr(line), self.filename, self.lineno))
         start = Timestamp.parse(matcher.group(u"start"))
+        start0 = start
         end = Timestamp.parse(matcher.group(u"end"))
-        if start >= end:
+        if start <= current_time:
+            start = current_time + 1
+        if start0 >= end:
             raise Exception("The input srt has a start >= end: %s %s:L%d" % (repr(line), self.filename, self.lineno))
+        if start >= end:
+            print >> sys.stderr, "WARNING: The input srt has a start (%s) >= end: %s %s:L%d" % (repr(start), repr(line), self.filename, self.lineno)
+            end = start + 1 # it is like we are killing the subline
         text = []
         line = self.readline_until_nonempty()
         if line is None:
@@ -325,9 +341,11 @@ class SRT:
         if current_time == self.current.end:
             event, obj = u"OFF", self.current
         while self.current is not None and current_time >= self.current.end:
-            self.next()
+            self.next(current_time)
         return event, obj
 
+    def __repr__(self):
+        return "SRT(%s)" % (self.filename)
 def mergesrt(srts, player):
     pool = SRTLines(srts, player)
     while True:
