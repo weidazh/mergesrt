@@ -212,8 +212,9 @@ class MPlayerFilter:
             print text
             print
         else:
-            # print >> sys.stderr, subno, start, end, "is filtered out"
+            # print >> sys.stderr, subno, "from", start, "to", end, "is filtered out"
             pass
+        return ok
 
 class SRTLines:
     def __init__(self, srts, player):
@@ -233,7 +234,9 @@ class SRTLines:
                 text.append(u"\n".join([EMPTY_LINE] * LINES_PER_SUB))
             else:
                 text.append(srtline.text)
-        self.player.append(self.subno, self.last_timestamp, timestamp, u"\n".join(text))
+        ok = self.player.append(self.subno, self.last_timestamp, timestamp, u"\n".join(text))
+        if not ok:
+            self.subno -= 1
 
     def tell_events(self, timestamp, events):
         self.conclude(timestamp)
